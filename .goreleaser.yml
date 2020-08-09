@@ -1,0 +1,59 @@
+project_name: get-priv-data-gfe
+env:
+  - GO111MODULE=on
+before:
+  hooks:
+  - go mod tidy
+builds:
+- id: linux-glibc
+  main: ./cmd/get-priv-data-gfe
+  env:
+  - CGO_ENABLED=1
+  goos:
+  - linux
+  goarch:
+  - amd64
+- id: win
+  main: ./cmd/get-priv-data-gfe
+  env:
+  - CC=/usr/bin/x86_64-w64-mingw32-gcc
+  - CGO_ENABLED=1
+  goos:
+  - windows
+  goarch:
+  - amd64
+archives:
+- id: linux-glibc
+  builds:
+  - linux-glibc
+  name_template: "{{ .ProjectName }}_{{ .Version }}_no7z_{{ .Os }}_{{ .Arch }}"
+  format: zip
+  files:
+  - LICENSE
+  - README.md
+  # - 7z.so                   
+  # - libc7zip.so
+  replacements:
+    amd64: x86_64
+- id: win
+  builds:
+  - win
+  name_template: "{{ .ProjectName }}_{{ .Version }}_no7z_{{ .Os }}_{{ .Arch }}"
+  format: zip
+  files:
+  - LICENSE
+  - README.md
+  # - 7z.dll                  
+  # - c7zip.dll 
+  replacements:
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
