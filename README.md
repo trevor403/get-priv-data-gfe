@@ -8,10 +8,10 @@ The C code might look something like this
 NvFBCCreateParams createParams;
 memset(&createParams, 0, sizeof(createParams));
 
-((&createParams.pPrivateData) + 0x0) = 0xAABBCCDD;
-((&createParams.pPrivateData) + 0x4) = 0xEEFF0011;
-((&createParams.pPrivateData) + 0x8) = 0x22334455;
-((&createParams.pPrivateData) + 0x10) = 0x66778899;
+((&createParams.pPrivateData) + 0x0) = 0x00000000;
+((&createParams.pPrivateData) + 0x4) = 0x00000000;
+((&createParams.pPrivateData) + 0x8) = 0x00000000;
+((&createParams.pPrivateData) + 0x10) = 0x00000000;
 
 createParams.dwPrivateDataSize = 16;
 ```
