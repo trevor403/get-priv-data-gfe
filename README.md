@@ -18,7 +18,7 @@ createParams.dwPrivateDataSize = 16;
 
 So we want to find an assignment (MOV dword ptr) of value 16 (10h)
 
-proceeded by 4x evenly spaces 4 byte assignments.
+proceeded by 4x evenly spaced 4 byte assignments.
 
 ## Usage
 
