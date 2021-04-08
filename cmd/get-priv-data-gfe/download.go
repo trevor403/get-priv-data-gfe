@@ -105,7 +105,7 @@ func pickDownloadURL(repoContents []GitHubRepoContents) string {
 
 func getInstaller(gfePath string) error {
 	// get github folder contents
-	resp, err := http.Get("https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/Nvidia/GeForceExperience")
+	resp, err := http.Get("https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/n/Nvidia/GeForceExperience")
 	if err != nil {
 		return err
 	}
