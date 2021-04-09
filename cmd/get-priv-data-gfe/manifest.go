@@ -13,22 +13,22 @@ type GitHubRepoContents struct {
 }
 
 type WinGetPkg struct {
-	ID           string `yaml:"Id"`
-	Publisher    string `yaml:"Publisher"`
-	Name         string `yaml:"Name"`
-	Author       string `yaml:"Author"`
-	Description  string `yaml:"Description"`
-	AppMoniker   string `yaml:"AppMoniker"`
-	Tags         string `yaml:"Tags"`
-	Homepage     string `yaml:"Homepage"`
-	License      string `yaml:"License"`
-	LicenseURL   string `yaml:"LicenseUrl"`
-	MinOSVersion string `yaml:"MinOSVersion"`
-	Version      string `yaml:"Version"`
+	ID           string   `yaml:"Id"`
+	Publisher    string   `yaml:"Publisher"`
+	Name         string   `yaml:"Name"`
+	Author       string   `yaml:"Author"`
+	Description  string   `yaml:"Description"`
+	AppMoniker   string   `yaml:"AppMoniker"`
+	Tags         []string `yaml:"Tags"`
+	Homepage     string   `yaml:"Homepage"`
+	License      string   `yaml:"License"`
+	LicenseURL   string   `yaml:"LicenseUrl"`
+	MinOSVersion string   `yaml:"MinOSVersion"`
+	Version      string   `yaml:"Version"`
 	Installers   []struct {
-		Arch   string `yaml:"Arch"`
-		URL    string `yaml:"Url"`
-		Sha256 string `yaml:"Sha256"`
-		Scope  string `yaml:"Scope"`
+		Architecture    string `yaml:"Architecture"`
+		InstallerURL    string `yaml:"InstallerUrl"`
+		InstallerSha256 string `yaml:"InstallerSha256"`
+		Scope           string `yaml:"Scope"`
 	} `yaml:"Installers"`
 }

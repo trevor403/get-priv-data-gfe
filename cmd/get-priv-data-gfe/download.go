@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path"
 	"sort"
 
 	"io"
 
-	"github.com/itchio/boar/szextractor"
-	"github.com/itchio/headway/state"
-	"github.com/itchio/sevenzip-go/sz"
-	"gopkg.in/yaml.v2"
+	"github.com/saracen/go7z"
+	"gopkg.in/yaml.v3"
 
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 )
 
@@ -85,7 +83,7 @@ func createCacheDir() (string, error) {
 	return cacheDir, nil
 }
 
-func pickDownloadURL(repoContents []GitHubRepoContents) string {
+func pickVersion(repoContents []GitHubRepoContents) string {
 	fileNames := make([]string, len(repoContents))
 	for i, contents := range repoContents {
 		fileNames[i] = contents.Name
@@ -94,18 +92,18 @@ func pickDownloadURL(repoContents []GitHubRepoContents) string {
 	sort.Strings(fileNames)
 	newest := fileNames[len(fileNames)-1]
 
-	for _, contents := range repoContents {
-		if contents.Name == newest {
-			return contents.DownloadURL
-		}
-	}
+	return newest
+}
 
+func pickDownloadURL(repoContents []GitHubRepoContents) string {
 	return repoContents[0].DownloadURL
 }
 
 func getInstaller(gfePath string) error {
+	const wingetURL = "https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/n/Nvidia/GeForceExperience"
+
 	// get github folder contents
-	resp, err := http.Get("https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/n/Nvidia/GeForceExperience")
+	resp, err := http.Get(wingetURL)
 	if err != nil {
 		return err
 	}
@@ -117,6 +115,27 @@ func getInstaller(gfePath string) error {
 
 	// unmarshal json
 	var repoContents []GitHubRepoContents
+	err = json.Unmarshal(b, &repoContents)
+	if err != nil {
+		return err
+	} else if len(repoContents) == 0 {
+		return fmt.Errorf("too few Contents entries")
+	}
+
+	version := pickVersion(repoContents)
+
+	// get github folder contents
+	resp, err = http.Get(fmt.Sprintf("%s/%s", wingetURL, version))
+	if err != nil {
+		return err
+	}
+	b, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+
+	// unmarshal json
 	err = json.Unmarshal(b, &repoContents)
 	if err != nil {
 		return err
@@ -147,7 +166,7 @@ func getInstaller(gfePath string) error {
 	}
 
 	// get GeForceNow exe
-	resp, err = http.Get(winget.Installers[0].URL)
+	resp, err = http.Get(winget.Installers[0].InstallerURL)
 	if err != nil {
 		return err
 	}
@@ -194,58 +213,30 @@ func getArchive(gfePath, szPath string) error {
 }
 
 func getDll(szPath, dllPath string) error {
-	file, err := os.Open(szPath)
+	sz, err := go7z.OpenReader(szPath)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	defer file.Close()
+	defer sz.Close()
 
-	stats, err := file.Stat()
-	if err != nil {
-		return err
-	}
-	size := stats.Size()
-
-	// lib, err := sz.NewLib()
-	consumer := &state.Consumer{}
-	lib, err := szextractor.GetLib(consumer)
-	if err != nil {
-		return err
-	}
-
-	defer lib.Free()
-
-	is, err := sz.NewInStream(file, "7z", size)
-	if err != nil {
-		return err
-	}
-
-	is.Stats = &sz.ReadStats{}
-
-	a, err := lib.OpenArchive(is, true)
-	if err != nil {
-		return err
-	}
-
-	itemCount, err := a.GetItemCount()
-	if err != nil {
-		return err
-	}
-
-	var item *sz.Item
-	for i := int64(0); i < itemCount; i++ {
-		item = a.GetItem(i)
-		s, _ := item.GetStringProperty(sz.PidPath)
-		if path.Base(s) == dllname {
-			break
+	for {
+		hdr, err := sz.Next()
+		if err == io.EOF {
+			break // End of archive
 		}
-		item.Free()
-		item = nil
+		if err != nil {
+			panic(err)
+		}
+
+		if path.Base(hdr.Name) == dllname {
+			break
+		} else {
+			_, err = io.Copy(ioutil.Discard, sz)
+			if err != nil {
+				return err
+			}
+		}
 	}
-	if item == nil {
-		return fmt.Errorf("could not find %s in archive", dllname)
-	}
-	defer item.Free()
 
 	out, err := os.Create(dllPath)
 	if err != nil {
@@ -253,17 +244,7 @@ func getDll(szPath, dllPath string) error {
 	}
 	defer out.Close()
 
-	outstream, err := sz.NewOutStream(out)
-	if err != nil {
-		return err
-	}
-
-	err = a.Extract(item, outstream)
-	if err != nil {
-		return err
-	}
-
-	err = outstream.Close()
+	_, err = io.Copy(out, sz)
 	if err != nil {
 		return err
 	}
