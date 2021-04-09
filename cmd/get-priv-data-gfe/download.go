@@ -12,7 +12,7 @@ import (
 
 	"io"
 
-	"github.com/saracen/go7z"
+	"github.com/gen2brain/go-unarr"
 	"gopkg.in/yaml.v3"
 
 	"log"
@@ -213,38 +213,35 @@ func getArchive(gfePath, szPath string) error {
 }
 
 func getDll(szPath, dllPath string) error {
-	sz, err := go7z.OpenReader(szPath)
-	if err != nil {
-		panic(err)
-	}
-	defer sz.Close()
-
-	for {
-		hdr, err := sz.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			panic(err)
-		}
-
-		if path.Base(hdr.Name) == dllname {
-			break
-		} else {
-			_, err = io.Copy(ioutil.Discard, sz)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	out, err := os.Create(dllPath)
+	a, err := unarr.NewArchive(szPath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer a.Close()
 
-	_, err = io.Copy(out, sz)
+	list, err := a.List()
+	if err != nil {
+		return err
+	}
+
+	var archivePath string
+	for _, archivePath = range list {
+		if path.Base(archivePath) == dllname {
+			break
+		}
+	}
+
+	err = a.EntryFor(archivePath)
+	if err != nil {
+		return err
+	}
+
+	data, err := a.ReadAll()
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dllPath, data, 0666)
 	if err != nil {
 		return err
 	}
